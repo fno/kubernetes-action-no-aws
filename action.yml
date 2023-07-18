@@ -1,4 +1,4 @@
-name: "Kubernetes Action"
+name: "Kubernetes kubectl Action without aws"
 description: "Interacts with kubernetes clusters calling kubectl commands."
 branding:
   icon: 'anchor'  
