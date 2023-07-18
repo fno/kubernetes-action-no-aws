@@ -1,8 +1,8 @@
 kubernetes-action
 =============
-Interacts with kubernetes clusters calling `kubectl` commands. Integrates support for **AWS EKS**.
+Interacts with kubernetes clusters calling `kubectl` commands.
 
-Fork of https://github.com/Consensys/kubernetes-action. Removes the deprecated Python 2.7. awscli v1 for K8S usage outside of aws.
+Fork of https://github.com/Consensys/kubernetes-action. Removes the deprecated Python 2.7. awscli v1 and thus removes EKS support.
 ## Usage
 
 ### Basic Example
