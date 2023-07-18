@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Trigger deploy
-        uses: Consensys/kubernetes-action@master
+        uses: fno/kubernetes-action-no-aws@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         with:
@@ -50,7 +50,7 @@ cat ~/.kube/config | base64 | pbcopy # pbcopy will copy the secret to the clipbo
 ```yaml
       - name: Save container image
         id: image-save
-        uses: Consensys/kubernetes-action@master
+        uses: fno/kubernetes-action-no-aws@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         with:
