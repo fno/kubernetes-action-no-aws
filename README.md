@@ -2,6 +2,7 @@ kubernetes-action
 =============
 Interacts with kubernetes clusters calling `kubectl` commands. Integrates support for **AWS EKS**.
 
+Fork of https://github.com/Consensys/kubernetes-action. Removes the deprecated Python 2.7. awscli v1 for K8S usage outside of aws.
 ## Usage
 
 ### Basic Example
@@ -26,33 +27,6 @@ jobs:
           args: apply deployment.yaml
 ```
 
-### EKS Example
-```yml
-name: CI
-
-on:
-  - push
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Trigger deploy
-        uses: Consensys/kubernetes-action@master
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
-        with:
-          args: apply deployment.yaml
-```
 
 ## Config
 
@@ -67,15 +41,6 @@ One or more **secrets** needs to be created to store cluster credentials. (see [
 ```bash
 cat ~/.kube/config | base64 | pbcopy # pbcopy will copy the secret to the clipboard (Mac OSX only)
 ```
-
-#### EKS
-- **KUBE_CONFIG_DATA**: Same as Basic configuration above.
-
-- **AWS_ACCESS_KEY_ID**: AWS_ACCESS_KEY_ID of a IAM user with permissions to access the cluster.
-
-- **AWS_SECRET_ACCESS_KEY**: AWS_SECRET_ACCESS_KEY of a IAM user with permissions to access the cluster.
-
-Make sure your users has the proper IAM permissions to access your cluster and that its configured inside kubernetes (more info [here](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)).
 
 ## Outputs
 
