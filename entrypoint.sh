@@ -26,7 +26,9 @@ set -e
 echo "$result"
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
-  { echo "result<<EOF_RESULT"; echo "$result"; echo "EOF_RESULT"; } >> "$GITHUB_OUTPUT"
+  # Random delimiter so kubectl output can never terminate the value early.
+  delimiter="EOF_RESULT_$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
+  { echo "result<<$delimiter"; echo "$result"; echo "$delimiter"; } >> "$GITHUB_OUTPUT"
 fi
 
 exit "$status"

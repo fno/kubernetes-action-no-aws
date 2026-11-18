@@ -1,4 +1,5 @@
-FROM alpine:3.24.4
+# Pinned by multi-arch index digest; update tag and digest together.
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 
 # kubectl version to install (official release from dl.k8s.io).
 ARG KUBECTL_VERSION="v1.32.13"
