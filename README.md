@@ -3,6 +3,8 @@ kubernetes-action
 Interacts with kubernetes clusters calling `kubectl` commands.
 
 Fork of https://github.com/Consensys/kubernetes-action. Removes the deprecated Python 2.7. awscli v1 and thus removes EKS support.
+
+The image ships the official `kubectl` release from `dl.k8s.io` (currently v1.32.13, checksum-verified at build time). The action exits with `kubectl`'s exit code.
 ## Usage
 
 ### Basic Example
@@ -35,7 +37,7 @@ jobs:
 One or more **secrets** needs to be created to store cluster credentials. (see [here](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets) for help on creating secrets). 
 
 #### Basic
-- **KUBE_CONFIG_DATA**: A `base64` representation of `~/.kube/config` file.
+- **KUBE_CONFIG_DATA**: A `base64` representation of `~/.kube/config` file. It is decoded to a private temporary file inside the container and never printed. The action fails early if it is missing or not valid base64.
 
 ##### Example
 ```bash
