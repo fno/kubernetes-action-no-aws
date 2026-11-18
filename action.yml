@@ -1,15 +1,18 @@
 name: "Kubernetes kubectl Action without aws"
-description: "Interacts with kubernetes clusters calling kubectl commands."
+description: "Runs a kubectl command against a Kubernetes cluster using a base64-encoded kubeconfig from KUBE_CONFIG_DATA."
 branding:
-  icon: 'anchor'  
+  icon: 'anchor'
   color: 'blue'
 inputs:
   args:
-    description: "Arguments of kubectl"
+    description: >-
+      kubectl arguments as a single string, e.g. "rollout status deploy/my-app --timeout=5m".
+      The string is split on whitespace; quotes are NOT interpreted and are passed to kubectl literally.
+      Requires the KUBE_CONFIG_DATA environment variable (base64-encoded kubeconfig).
     required: true
 outputs:
   result:
-    description: "Output of the kubectl command run"
+    description: "Standard output of the kubectl command (may be multiline). Stderr is only shown in the log."
 runs:
   using: "docker"
   image: "Dockerfile"

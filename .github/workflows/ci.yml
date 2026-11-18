@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck entrypoint.sh
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t kubernetes-action:ci .
+
+      - name: kubectl version
+        run: docker run --rm --entrypoint kubectl kubernetes-action:ci version --client
+
+      - name: Fails without KUBE_CONFIG_DATA
+        run: |
+          if docker run --rm kubernetes-action:ci "version --client"; then
+            echo "expected failure"; exit 1
+          fi
+
+      - name: Fails with invalid KUBE_CONFIG_DATA
+        run: |
+          if docker run --rm -e KUBE_CONFIG_DATA='!!!' kubernetes-action:ci "version --client"; then
+            echo "expected failure"; exit 1
+          fi
+
+  action:
+    # Runs the action the way callers do, against a dummy kubeconfig (no cluster needed).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dummy kubeconfig
+        run: |
+          cat > "$RUNNER_TEMP/kubeconfig" <<'EOF'
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: dummy
+              cluster:
+                server: https://127.0.0.1:1
+          contexts:
+            - name: dummy
+              context:
+                cluster: dummy
+                namespace: my-namespace
+          current-context: dummy
+          users: []
+          EOF
+          echo "KUBE_CONFIG_DATA=$(base64 -w0 < "$RUNNER_TEMP/kubeconfig")" >> "$GITHUB_ENV"
+
+      - name: Single-line output
+        id: single
+        uses: ./
+        with:
+          args: config view --minify -o jsonpath={.contexts[0].context.namespace}
+
+      - name: Multiline output
+        id: multi
+        uses: ./
+        with:
+          args: config get-contexts
+
+      - name: Check outputs
+        env:
+          SINGLE: ${{ steps.single.outputs.result }}
+          MULTI: ${{ steps.multi.outputs.result }}
+        run: |
+          test "$SINGLE" = "my-namespace"
+          test "$(printf '%s\n' "$MULTI" | wc -l)" -eq 2
+          printf '%s\n' "$MULTI" | grep -q dummy

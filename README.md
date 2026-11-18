@@ -1,64 +1,105 @@
-kubernetes-action
-=============
-Interacts with kubernetes clusters calling `kubectl` commands.
+kubernetes-action-no-aws
+========================
+GitHub Action that runs a `kubectl` command against a Kubernetes cluster.
 
-Fork of https://github.com/Consensys/kubernetes-action. Removes the deprecated Python 2.7. awscli v1 and thus removes EKS support.
+Fork of [Consensys/kubernetes-action](https://github.com/Consensys/kubernetes-action), with the AWS CLI (and therefore EKS-specific authentication) removed. Works with any cluster reachable through a plain kubeconfig.
+
+- Ships the official `kubectl` release from `dl.k8s.io` (currently **v1.32.13**), checksum-verified at build time, on a digest-pinned Alpine base image.
+- kubectl supports clusters within one minor version of itself, so v1.32 is supported against Kubernetes **1.31 – 1.33**.
+- The action exits with `kubectl`'s exit code.
+
 ## Usage
 
-### Basic Example
-
 ```yml
-name: CI
+name: Deploy
 
 on:
-  - push
+  push:
+    branches: [master]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Trigger deploy
+      - name: Apply manifests
         uses: fno/kubernetes-action-no-aws@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         with:
-          args: apply deployment.yaml
+          args: apply -f ./k8s -n my-namespace
 ```
 
+More `args` examples:
 
-## Config
+```yml
+args: rollout restart deploy/my-app -n my-namespace
+args: rollout status deploy/my-app -n my-namespace --timeout=5m
+args: set image deploy/my-app my-app=registry.example.com/my-app:${{ github.sha }} -n my-namespace
+```
 
-### Secrets
+### How `args` is parsed
 
-One or more **secrets** needs to be created to store cluster credentials. (see [here](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets) for help on creating secrets). 
+`args` is a single string that is split on whitespace into kubectl arguments. It is **not** parsed like a shell command line:
 
-#### Basic
-- **KUBE_CONFIG_DATA**: A `base64` representation of `~/.kube/config` file.
+- Quotes are not interpreted. They are passed to kubectl literally, so `-o jsonpath="{..image}"` prints the image *including* the surrounding `"`. Write `-o jsonpath={..image}` instead.
+- An argument cannot contain spaces.
+- Glob patterns such as `-f k8s/*.yaml` are expanded against the workspace.
 
-##### Example
+## Inputs
+
+| Name   | Required | Description |
+|--------|----------|-------------|
+| `args` | yes      | kubectl arguments as one string (see above). |
+
+## Environment
+
+| Name               | Required | Description |
+|--------------------|----------|-------------|
+| `KUBE_CONFIG_DATA` | yes      | Base64-encoded kubeconfig. |
+
+Store the kubeconfig as an [encrypted secret](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions):
+
 ```bash
-cat ~/.kube/config | base64 | pbcopy # pbcopy will copy the secret to the clipboard (Mac OSX only)
+base64 < ~/.kube/config | tr -d '\n'
 ```
+
+Inside the container the kubeconfig is decoded to a private temporary file (mode `0600`) that is removed when the step ends, and it is never printed. The action fails early with an error if `KUBE_CONFIG_DATA` is missing or not valid base64.
+
+Use a dedicated service account with the minimum RBAC permissions the workflow needs.
 
 ## Outputs
 
-- **result**: Output of the `kubectl` command.
+| Name     | Description |
+|----------|-------------|
+| `result` | Standard output of the kubectl command (may be multiline). Stderr only appears in the log. |
 
-### Example
+Pass the output to later steps through `env` rather than inlining `${{ }}` into a script, which could allow shell injection:
+
 ```yaml
-      - name: Save container image
-        id: image-save
+      - name: Get current image
+        id: image
         uses: fno/kubernetes-action-no-aws@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         with:
-          args: get deploy foo -o jsonpath="{..image}"
+          args: get deploy/my-app -n my-namespace -o jsonpath={..image}
 
       - name: Print image
-        run: 
-          echo ${{ steps.image-save.outputs.result }}
+        env:
+          IMAGE: ${{ steps.image.outputs.result }}
+        run: echo "$IMAGE"
 ```
 
-More info on how to use outputs [here](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/metadata-syntax-for-github-actions#outputs).
+## Building locally
+
+```bash
+docker build -t kubernetes-action .
+```
+
+A different kubectl version can be selected with `--build-arg KUBECTL_VERSION=v1.32.x`.
+
+## Credits
+
+Based on [Consensys/kubernetes-action](https://github.com/Consensys/kubernetes-action).
